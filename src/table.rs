@@ -1,45 +1,67 @@
 use regex::Regex;
-use std::str::FromStr;
 
+#[derive(Default)]
 pub struct Table<'a> {
     pub header: Vec<String>,
-    pub rows: Vec<Vec<&'a str>>,
+    pub rows: Vec<Vec<String>>,
+    header_line: &'a str,
+    row_lines: Vec<&'a str>,
+    indexes: Vec<usize>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct ParseTableError;
-
-impl FromStr for Table<'_> {
-    type Err = ParseTableError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl<'a> Table<'a> {
+    fn set_header_and_row_lines(mut self, s: &'a str) -> Table<'a> {
         let mut lines: Vec<&str> = s.lines().filter(|line| !line.is_empty()).collect();
-        let header_line = lines.remove(0);
+        self.header_line = lines.remove(0);
+        self.row_lines = lines;
+        self
+    }
+    fn set_columns_indexes(mut self) -> Table<'a> {
+        let re = Regex::new(r"(\S+ ?)+").unwrap();
+        self.indexes = re.find_iter(self.header_line).map(|m| m.start()).collect();
+        self
+    }
+    fn parse_cells(&self, line: &str) -> Vec<String> {
+        self.indexes
+            .iter()
+            .map(|index| {
+                let re = Regex::new(r"^(\S ?)+").unwrap();
+                let cell_match = re.find(line.split_at(*index).1);
+                let cell = match cell_match {
+                    Some(pattern) => pattern.as_str().trim(),
+                    None => "",
+                };
+                cell.to_string()
+            })
+            .collect()
+    }
+    fn parse_header_cells(mut self) -> Table<'a> {
+        self.header = self.parse_cells(self.header_line);
+        self
+    }
+    fn parse_row_cells(mut self) -> Table<'a> {
+        self.rows = self
+            .row_lines
+            .iter()
+            .map(|line| self.parse_cells(line))
+            .collect();
+        self
+    }
+}
 
-        let re = Regex::new(r"(\w+ \w)+").unwrap();
-        let indexes: Vec<usize> = re.find_iter(header_line).map(|m| m.start()).collect();
-
-        let mut header = Vec::new();
-        for index in indexes {
-            let header_cell = match re.find(header_line.split_at(index).1) {
-                Some(pattern) => pattern.as_str(),
-                None => "",
-            };
-            header.push(header_cell.to_string())
-        }
-
-        let table = Table {
-            header,
-            rows: Vec::new(),
-        };
-        Ok(table)
+impl<'a> From<&'a str> for Table<'a> {
+    fn from(s: &'a str) -> Table<'a> {
+        Table::default()
+            .set_header_and_row_lines(s)
+            .set_columns_indexes()
+            .parse_header_cells()
+            .parse_row_cells()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Table;
-    use std::str::FromStr;
 
     #[test]
     fn parse_table_from_string() {
@@ -48,12 +70,12 @@ mod tests {
             a           bbbbbbbbbb  ccc     \n\
             dddddddddd              f       \n\
         ";
-        let table = Table::from_str(string).unwrap();
+        let table = Table::from(string);
 
         assert_eq!(table.header, vec!["header 1", "header 2", "header 3"]);
-        // assert_eq!(
-        //     table.rows,
-        //     vec![vec!["a", "bbbbbbbbbb", "ccc"], vec!["dddddddddd", "", "f"]]
-        // );
+        assert_eq!(
+            table.rows,
+            vec![vec!["a", "bbbbbbbbbb", "ccc"], vec!["dddddddddd", "", "f"]]
+        );
     }
 }

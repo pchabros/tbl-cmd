@@ -1,4 +1,4 @@
-use crate::tui;
+use crate::{table, tui};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{
     prelude::{Buffer, Constraint, Rect},
@@ -20,28 +20,16 @@ pub enum Mode {
 pub struct App<'a> {
     pub mode: Mode,
     pub exit: bool,
-    pub header: Vec<&'a str>,
-    pub rows: Vec<Vec<&'a str>>,
+    pub table: table::Table<'a>,
 }
 
 impl App<'_> {
     pub fn new(input: &str) -> App {
-        let mut lines: Vec<&str> = input.split('\n').collect();
-        let header = lines
-            .remove(0)
-            .split("  ")
-            .map(|cell| cell.trim())
-            .collect();
-        let rows = lines
-            .iter()
-            .map(|line| line.split("  ").map(|cell| cell.trim()).collect())
-            .collect();
-
+        let table = table::Table::from(input);
         App {
             mode: Mode::Main,
             exit: false,
-            header,
-            rows,
+            table,
         }
     }
 
@@ -87,20 +75,15 @@ impl App<'_> {
 
 impl Widget for &App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        // let n_col: u32 = self
-        //     .header
-        //     .len()
-        //     .try_into()
-        //     .expect("number of columns should not overflow u32");
-        // let widths = self.header.iter().map(|_| Constraint::Ratio(1, n_col));
-        let widths = self.header.iter().map(|_| Constraint::Length(100));
-        let rows = self.rows.iter().map(|row| Row::new(row.clone()));
+        let widths = self.table.header.iter().map(|_| Constraint::Min(0));
+        let rows = self.table.rows.iter().map(|row| Row::new(row.clone()));
         let header = self
+            .table
             .header
             .iter()
             .enumerate()
             .map(|(i, cell)| {
-                Cell::new(*cell).style(Style::default().bg(if i % 2 == 0 {
+                Cell::new(cell.clone()).style(Style::default().bg(if i % 2 == 0 {
                     Color::Yellow
                 } else {
                     Color::LightRed
