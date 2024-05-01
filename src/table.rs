@@ -1,4 +1,5 @@
 use regex::Regex;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default)]
 pub struct Table<'a> {
@@ -26,7 +27,8 @@ impl<'a> Table<'a> {
             .iter()
             .map(|index| {
                 let re = Regex::new(r"^(\S ?)+").unwrap();
-                let cell_match = re.find(line.split_at(*index).1);
+                let line_left = line.graphemes(true).skip(*index).collect::<String>();
+                let cell_match = re.find(&line_left);
                 let cell = match cell_match {
                     Some(pattern) => pattern.as_str().trim(),
                     None => "",
