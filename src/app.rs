@@ -76,19 +76,19 @@ impl App<'_> {
 impl Widget for &App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let widths = self.table.header.iter().map(|_| Constraint::Min(0));
-        let rows = self.table.rows.iter().map(|row| Row::new(row.clone()));
+        let rows = self.table.rows.iter().cloned().enumerate().map(|(i, row)| {
+            let row = Row::new(row);
+            if i % 2 == 0 {
+                row.style(Style::default().bg(Color::Black))
+            } else {
+                row
+            }
+        });
         let header = self
             .table
             .header
             .iter()
-            .enumerate()
-            .map(|(i, cell)| {
-                Cell::new(cell.clone()).style(Style::default().bg(if i % 2 == 0 {
-                    Color::Yellow
-                } else {
-                    Color::LightRed
-                }))
-            })
+            .map(|cell| Cell::new(cell.clone()))
             .collect::<Row>()
             .style(Style::new().bold());
         Table::new(rows, widths)
