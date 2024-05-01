@@ -67,7 +67,7 @@ mod tests {
     fn parse_table_from_string() {
         let string = "\n\
             header 1    header 2    header 3\n\
-            a           bbbbbbbbbb  ccc     \n\
+            a           bbbbbbbbb…  ccc     \n\
             dddddddddd              f       \n\
         ";
         let table = Table::from(string);
@@ -75,7 +75,7 @@ mod tests {
         assert_eq!(table.header, vec!["header 1", "header 2", "header 3"]);
         assert_eq!(
             table.rows,
-            vec![vec!["a", "bbbbbbbbbb", "ccc"], vec!["dddddddddd", "", "f"]]
+            vec![vec!["a", "bbbbbbbbb…", "ccc"], vec!["dddddddddd", "", "f"]]
         );
     }
 }
