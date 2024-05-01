@@ -88,7 +88,8 @@ impl Widget for &App<'_> {
             .table
             .header
             .iter()
-            .map(|cell| Cell::new(cell.clone()))
+            .cloned()
+            .map(Cell::new)
             .collect::<Row>()
             .style(Style::new().bold());
         Table::new(rows, widths)
