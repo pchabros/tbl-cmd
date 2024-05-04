@@ -7,6 +7,7 @@ mod app;
 mod cli;
 mod table;
 mod tui;
+mod ui;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = tui::init()?;

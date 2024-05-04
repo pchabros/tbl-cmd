@@ -1,14 +1,9 @@
 use crate::{table, tui};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::{
-    prelude::{Buffer, Constraint, Rect},
-    style::{Color, Style, Stylize},
-    widgets::{Block, Borders, Cell, Row, Table, Widget},
-    Frame,
-};
+use ratatui::Frame;
 use std::io;
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum Mode {
     #[default]
     Main,
@@ -19,8 +14,8 @@ pub enum Mode {
 #[derive(Default)]
 pub struct App<'a> {
     pub mode: Mode,
-    pub exit: bool,
     pub table: table::Table<'a>,
+    pub search: String,
 }
 
 impl App<'_> {
@@ -28,21 +23,18 @@ impl App<'_> {
         let table = table::Table::from(input);
         App {
             mode: Mode::Main,
-            exit: false,
             table,
+            search: String::new(),
         }
     }
 
-    pub fn run(&mut self, terminal: &mut tui::Tui) -> io::Result<()> {
-        while !self.exit {
-            terminal.draw(|frame| self.render_frame(frame))?;
-            self.handle_events()?;
-        }
-        Ok(())
-    }
-
-    fn render_frame(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.size());
+    pub fn filtered_rows(&self) -> Vec<Vec<String>> {
+        self.table
+            .rows
+            .iter()
+            .cloned()
+            .filter(|row| row.iter().any(|cell| cell.contains(&self.search)))
+            .collect()
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -53,50 +45,55 @@ impl App<'_> {
     }
 
     fn handle_key_event(&mut self, key: KeyCode) -> io::Result<()> {
-        match key {
-            KeyCode::Char('q') => self.exit(),
-            _ => {}
+        match self.mode {
+            Mode::Main => match key {
+                KeyCode::Char('q') => self.exit(),
+                KeyCode::Char('/') => self.search_mode(),
+                _ => {}
+            },
+            Mode::Search => match key {
+                KeyCode::Char(_) | KeyCode::Backspace => self.update_search(key),
+                KeyCode::Esc => self.main_mode(),
+                _ => {}
+            },
+            Mode::Exit => {}
         }
         Ok(())
     }
 
-    // fn decrement(&mut self) -> Result<()> {
-    //     if self.counter == 0 {
-    //         bail!("counter underflow")
-    //     }
-    //     self.counter -= 1;
-    //     Ok(())
-    // }
+    fn main_mode(&mut self) {
+        self.mode = Mode::Main;
+    }
+
+    fn search_mode(&mut self) {
+        self.mode = Mode::Search;
+    }
+
+    fn update_search(&mut self, key: KeyCode) {
+        match key {
+            KeyCode::Char(letter) => {
+                self.search.push(letter);
+            }
+            KeyCode::Backspace => {
+                self.search.pop();
+            }
+            _ => {}
+        };
+    }
 
     fn exit(&mut self) {
-        self.exit = true;
+        self.mode = Mode::Exit;
     }
-}
 
-impl Widget for &App<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let widths = self.table.header.iter().map(|_| Constraint::Min(0));
-        let rows = self.table.rows.iter().cloned().enumerate().map(|(i, row)| {
-            let row = Row::new(row);
-            if i % 2 == 0 {
-                row.style(Style::default().bg(Color::Black))
-            } else {
-                row
-            }
-        });
-        let header = self
-            .table
-            .header
-            .iter()
-            .cloned()
-            .map(Cell::new)
-            .collect::<Row>()
-            .style(Style::new().bold());
-        Table::new(rows, widths)
-            .header(header)
-            .column_spacing(3)
-            .block(Block::new().borders(Borders::ALL).title("Table"))
-            .style(Style::new().blue())
-            .render(area, buf)
+    pub fn run(&mut self, terminal: &mut tui::Tui) -> io::Result<()> {
+        while self.mode != Mode::Exit {
+            terminal.draw(|frame| self.render_frame(frame))?;
+            self.handle_events()?;
+        }
+        Ok(())
+    }
+
+    fn render_frame(&self, frame: &mut Frame) {
+        frame.render_widget(self, frame.size());
     }
 }
