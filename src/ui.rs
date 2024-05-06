@@ -24,10 +24,10 @@ impl App<'_> {
             .split(area)
     }
     fn render_table(&self, area: Rect, buf: &mut Buffer) {
-        let widths = self.table.header.iter().map(|_| Constraint::Min(0));
-        let filtered_rows = self.filtered_rows();
-        let rows = filtered_rows.iter().cloned().enumerate().map(|(i, row)| {
-            let row = Row::new(row);
+        let widths = self.table.header.cells.iter().map(|_| Constraint::Min(0));
+        let filtered_rows = self.table.filtered_rows(&self.search);
+        let rows = filtered_rows.iter().enumerate().map(|(i, row)| {
+            let row = Row::new(row.cells.clone());
             if i % 2 == 0 {
                 row.style(Style::default().bg(Color::Black))
             } else {
@@ -37,6 +37,7 @@ impl App<'_> {
         let header = self
             .table
             .header
+            .cells
             .iter()
             .cloned()
             .map(Cell::new)

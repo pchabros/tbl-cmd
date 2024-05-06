@@ -28,15 +28,6 @@ impl App<'_> {
         }
     }
 
-    pub fn filtered_rows(&self) -> Vec<Vec<String>> {
-        self.table
-            .rows
-            .iter()
-            .cloned()
-            .filter(|row| row.iter().any(|cell| cell.contains(&self.search)))
-            .collect()
-    }
-
     fn handle_events(&mut self) -> io::Result<()> {
         match event::read()? {
             Event::Key(key) if key.kind == KeyEventKind::Press => self.handle_key_event(key.code),
