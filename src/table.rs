@@ -1,18 +1,17 @@
 use regex::Regex;
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default)]
 pub struct Row {
     pub cells: Vec<String>,
 }
 
-impl<'a> Row {
-    fn new(line: &'a str, indexes: &[usize]) -> Self {
+impl Row {
+    fn new(line: &str, indexes: &[usize]) -> Self {
         let cells = indexes
             .iter()
             .map(|index| {
                 let re = Regex::new(r"^(\S ?)+").unwrap();
-                let line_left = line.graphemes(true).skip(*index).collect::<String>();
+                let line_left = line.chars().skip(*index).collect::<String>();
                 let cell_match = re.find(&line_left);
                 let cell = match cell_match {
                     Some(pattern) => pattern.as_str().trim(),
