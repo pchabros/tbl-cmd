@@ -1,23 +1,23 @@
 use regex::Regex;
 
 #[derive(Default)]
-pub struct Row {
-    pub cells: Vec<String>,
+pub struct Row<'a> {
+    pub cells: Vec<&'a str>,
 }
 
-impl Row {
-    fn new(line: &str, indexes: &[usize]) -> Self {
+impl<'a> Row<'a> {
+    fn new(line: &'a str, indexes: &[usize]) -> Self {
         let cells = indexes
             .iter()
             .map(|index| {
                 let re = Regex::new(r"^(\S ?)+").unwrap();
-                let line_left = line.chars().skip(*index).collect::<String>();
-                let cell_match = re.find(&line_left);
-                let cell = match cell_match {
+                let (char_index, _) = line.char_indices().nth(*index).unwrap_or((0, ' '));
+                let line_left = &line[char_index..];
+                let cell_match = re.find(line_left);
+                match cell_match {
                     Some(pattern) => pattern.as_str().trim(),
                     None => "",
-                };
-                cell.to_string()
+                }
             })
             .collect();
         Self { cells }
@@ -33,8 +33,8 @@ impl Row {
 
 #[derive(Default)]
 pub struct Table<'a> {
-    pub header: Row,
-    pub rows: Vec<Row>,
+    pub header: Row<'a>,
+    pub rows: Vec<Row<'a>>,
     header_line: &'a str,
     row_lines: Vec<&'a str>,
     indexes: Vec<usize>,
