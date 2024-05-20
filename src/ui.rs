@@ -27,21 +27,14 @@ impl App<'_> {
         let widths = self.table.header.cells.iter().map(|_| Constraint::Min(0));
         let filtered_rows = self.table.filtered_rows(&self.search);
         let rows = filtered_rows.iter().enumerate().map(|(i, row)| {
-            let row = Row::new(row.cells.clone());
+            let row = Row::new(row.cells.iter().map(|cell| Cell::new(*cell)));
             if i % 2 == 0 {
                 row.style(Style::default().bg(Color::Black))
             } else {
                 row
             }
         });
-        let header = self
-            .table
-            .header
-            .cells
-            .iter()
-            .cloned()
-            .map(Cell::new)
-            .collect::<Row>()
+        let header = Row::new(self.table.header.cells.iter().map(|cell| Cell::new(*cell)))
             .style(Style::new().bold());
         Table::new(rows, widths)
             .header(header)
